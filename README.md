@@ -2,12 +2,6 @@
 
 **Decentralized minting interface powered by HTTP 402 Payment Protocol and Ritual Chain TEE verification.**
 
-![Ritual Chain](https://img.shields.io/badge/Chain-Ritual%201979-green?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen?style=flat-square)
-
----
-
 ## 🎯 Overview
 
 RitualX402 is a web application that enables users to mint ERC-20 tokens and NFTs (ERC-721) on Ritual Chain using the **HTTP 402 Payment Protocol**. Each mint transaction is:
@@ -246,15 +240,6 @@ This project is licensed under the MIT License — see [LICENSE](LICENSE) file f
 - **EIP-712** — https://eips.ethereum.org/EIPS/eip-712
 - **HTTP 402** — https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402
 
----
-
-## 💬 Support & Issues
-
-- **Report Bug** — [Create GitHub Issue](https://github.com/YOUR_USERNAME/ritualx402/issues)
-- **Discussion** — [Ritual Discord](https://discord.gg/ritual)
-- **Documentation** — [Ritual Docs](https://docs.ritualfoundation.org)
-
----
 
 ## ⚠️ Disclaimer
 
@@ -262,4 +247,4 @@ This application interacts with blockchain networks and cryptocurrency. Use at y
 
 ---
 
-**Made with ❤️ for Ritual Chain | Last Updated: April 2026**
+**Made with ❤️ By Arokmub for Ritual Chain | Last Updated: April 2026**
