@@ -1,4 +1,6 @@
-import { ethers } from 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js';
+// ethers is already loaded as global in index.html
+const { ethers } = window;
+
 import { RITUAL_CHAIN } from '../config/chain.js';
 import { loadScript } from '../utils/helpers.js';
 import { setStatus } from '../ui/flow-stepper.js';
