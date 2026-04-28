@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RitualX402 — Mint on Ritual Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles/main.css"/>
+<link rel="stylesheet" href="styles/components.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo-wrap">
+      <span class="logo-text">Ritual<span>X402</span></span>
+    </div>
+    <div class="nav-right">
+      <span class="chain-badge" id="chainBadge">Ritual Chain · 1979</span>
+      <span class="balance-badge" id="balanceBadge">— RITUAL</span>
+      <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <!-- ALERTS -->
+  <div class="alert-banner" id="wrongNetworkAlert">
+    <span>⚠ Wrong network detected. Please switch to Ritual Chain (ID: 1979).</span>
+    <button class="alert-banner-btn" onclick="switchToRitual()">Switch Network</button>
+  </div>
+  <div class="alert-banner error-banner" id="noWalletAlert">
+    <span>🦊 No Web3 wallet detected. Install MetaMask or a compatible wallet to use this app.</span>
+    <button class="alert-banner-btn" onclick="window.open('https://metamask.io/download/', '_blank')">Install MetaMask</button>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">X402 Payment Protocol</div>
+    <h1>Mint Tokens &amp; NFTs<br/>on <em>Ritual Chain</em></h1>
+    <p>Pay-per-mint via HTTP 402 — no subscriptions, no API keys. Each mint triggers an on-chain X402 payment verified inside Ritual's TEE executor at precompile 0x0801.</p>
+  </div>
+
+  <!-- FAUCET STRIP -->
+  <div class="faucet-strip">
+    <span>Need testnet RITUAL? Get tokens from the official faucet.</span>
+    <a href="https://faucet.ritualfoundation.org/" target="_blank" rel="noopener">→ Open Faucet ↗</a>
+  </div>
+
+  <!-- CHAIN INFO PANEL -->
+  <div class="chain-info" id="chainInfoPanel">
+    <div class="chain-info-item">
+      <span class="ci-label">Network Status</span>
+      <span class="ci-val"><span class="ci-dot"></span>Ritual Testnet</span>
+    </div>
+    <div class="chain-info-item">
+      <span class="ci-label">Chain ID</span>
+      <span class="ci-val" id="ciChainId">1979 (0x7BB)</span>
+    </div>
+    <div class="chain-info-item">
+      <span class="ci-label">Block Number</span>
+      <span class="ci-val" id="ciBlock">—</span>
+    </div>
+    <div class="chain-info-item">
+      <span class="ci-label">Your Balance</span>
+      <span class="ci-val" id="ciBalance">—</span>
+    </div>
+    <div class="chain-info-item">
+      <span class="ci-label">RPC</span>
+      <span class="ci-val">rpc.ritualfoundation.org</span>
+    </div>
+    <div class="chain-info-item">
+      <span class="ci-label">X402 Precompile</span>
+      <span class="ci-val">0x0801 (HTTP)</span>
+    </div>
+  </div>
+
+  <!-- X402 FLOW STEPPER -->
+  <div class="x402-flow" id="flowBar">
+    <div class="flow-step">
+      <div class="flow-dot active" id="fd1">1</div>
+      <div class="flow-label">Request</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-dot" id="fd2">2</div>
+      <div class="flow-label">402 Response</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-dot" id="fd3">3</div>
+      <div class="flow-label">Payment Payload</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-dot" id="fd4">4</div>
+      <div class="flow-label">TEE Verify</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-dot" id="fd5">5</div>
+      <div class="flow-label">Mint On-Chain</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('token', this)">⬡ Mint Token</button>
+    <button class="tab-btn" onclick="switchTab('nft', this)">◈ Mint NFT</button>
+  </div>
+
+  <!-- TOKEN TAB -->
+  <div class="tab-panel active" id="panel-token">
+    <div class="card">
+      <div class="status-bar" id="tokenStatus">
+        <div class="status-dot pending" id="tokenStatusDot"></div>
+        <span id="tokenStatusText">Awaiting wallet...</span>
+      </div>
+
+      <div class="payment-box">
+        <div class="payment-box-header">
+          <span class="x402-tag">X402</span>
+          Payment Required — Mint Token (ERC-20)
+        </div>
+        <div class="payment-row"><span class="key">Scheme</span><span class="val green">exact</span></div>
+        <div class="payment-row"><span class="key">Network</span><span class="val">Ritual Chain (ID: 1979)</span></div>
+        <div class="payment-row"><span class="key">Resource</span><span class="val">/v1/mint/token</span></div>
+        <div class="payment-row"><span class="key">Mint Fee</span><span class="val green" id="tokenFeeDisplay">0.001 RITUAL</span></div>
+        <div class="payment-row"><span class="key">Facilitator</span><span class="val mono">0x0801 (HTTP Precompile)</span></div>
+        <div class="payment-row"><span class="key">Standard</span><span class="val">EIP-3009 transferWithAuthorization</span></div>
+        <div class="payment-row"><span class="key">Tx Type</span><span class="val">sendTransaction → Ritual TEE</span></div>
+      </div>
+
+      <div class="field">
+        <label>Token Name</label>
+        <input type="text" id="tokenName" placeholder="e.g. MyRitualToken"/>
+      </div>
+      <div class="field">
+        <label>Token Symbol</label>
+        <input type="text" id="tokenSymbol" placeholder="e.g. MRT"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Initial Supply</label>
+          <input type="number" id="tokenSupply" placeholder="1000000" min="1"/>
+        </div>
+        <div class="field">
+          <label>Decimals</label>
+          <input type="number" id="tokenDecimals" value="18" min="0" max="18"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Recipient Address <span style="color:var(--green-light);font-size:0.65rem;">(defaults to connected wallet)</span></label>
+        <input type="text" id="tokenRecipient" placeholder="0x... (leave blank to use your wallet)"/>
+      </div>
+      <div class="field">
+        <label>X402 Mint Fee — <span id="feeLabel">0.001</span> RITUAL</label>
+        <div class="range-wrap">
+          <input type="range" id="feeRange" min="1" max="10" value="1" oninput="updateFee(this.value)"/>
+          <span class="range-val" id="feeRangeVal">1×</span>
+        </div>
+      </div>
+
+      <div class="payload-label" id="tokenPayloadLabel" style="display:none;">X402 Payload (EIP-3009 format)</div>
+      <div class="payload-viewer" id="tokenPayloadViewer"></div>
+
+      <button class="mint-btn" id="tokenMintBtn" onclick="executeMint('token')">
+        <span class="btn-icon">⬡</span> Mint Token via X402
+      </button>
+    </div>
+  </div>
+
+  <!-- NFT TAB -->
+  <div class="tab-panel" id="panel-nft">
+    <div class="card">
+      <div class="status-bar" id="nftStatus">
+        <div class="status-dot pending" id="nftStatusDot"></div>
+        <span id="nftStatusText">Awaiting wallet...</span>
+      </div>
+
+      <div class="payment-box">
+        <div class="payment-box-header">
+          <span class="x402-tag">X402</span>
+          Payment Required — Mint NFT (ERC-721)
+        </div>
+        <div class="payment-row"><span class="key">Scheme</span><span class="val green">exact</span></div>
+        <div class="payment-row"><span class="key">Network</span><span class="val">Ritual Chain (ID: 1979)</span></div>
+        <div class="payment-row"><span class="key">Resource</span><span class="val">/v1/mint/nft</span></div>
+        <div class="payment-row"><span class="key">Mint Fee</span><span class="val green">0.005 RITUAL</span></div>
+        <div class="payment-row"><span class="key">Standard</span><span class="val">ERC-721 / EIP-3009</span></div>
+        <div class="payment-row"><span class="key">Facilitator</span><span class="val mono">0x0801 (HTTP Precompile)</span></div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <label style="margin-bottom:8px;display:block;">NFT Image</label>
+          <div class="nft-preview" id="nftPreview" onclick="document.getElementById('nftImageInput').click()">
+            <span style="font-size:2rem;">◈</span>
+            <span>Click to upload</span>
+            <div class="preview-overlay"><span>◈</span><span>Change image</span></div>
+          </div>
+          <input type="file" id="nftImageInput" accept="image/*" onchange="previewNFT(this)"/>
+        </div>
+        <div>
+          <div class="field">
+            <label>NFT Name</label>
+            <input type="text" id="nftName" placeholder="e.g. Ritual Genesis #1"/>
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <textarea id="nftDesc" placeholder="Describe your NFT..."></textarea>
+          </div>
+          <div class="field">
+            <label>Collection</label>
+            <input type="text" id="nftCollection" placeholder="e.g. RitualGenesis"/>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Royalty %</label>
+              <input type="number" id="nftRoyalty" placeholder="e.g. 5" min="0" max="25"/>
+            </div>
+            <div class="field">
+              <label>Recipient Address</label>
+              <input type="text" id="nftRecipient" placeholder="0x..."/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="payload-label" id="nftPayloadLabel" style="display:none;">X402 Payload (EIP-3009 format)</div>
+      <div class="payload-viewer" id="nftPayloadViewer"></div>
+
+      <button class="mint-btn" id="nftMintBtn" onclick="executeMint('nft')">
+        <span class="btn-icon">◈</span> Mint NFT via X402
+      </button>
+    </div>
+  </div>
+
+  <!-- RECENT TRANSACTIONS -->
+  <div class="tx-section">
+    <div class="section-title">Recent Transactions</div>
+    <div class="tx-list" id="txList">
+      <div class="tx-empty" id="txEmpty">No transactions yet. Mint something!</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>RitualX402 · Built on <a href="https://ritualfoundation.org" target="_blank">Ritual Chain</a> · Chain ID 1979</p>
+    <p>Payments via <a href="https://x402.org" target="_blank">X402 Protocol</a> · by <a href="https://x.com/ArokMub" target="_blank">Arokmub</a></p>
+  </footer>
+</div>
+
+<!-- WALLET SELECTOR MODAL -->
+<div class="wallet-modal-overlay" id="walletModal">
+  <div class="wallet-modal">
+    <div class="wallet-modal-header">
+      <span class="wallet-modal-title">Connect Wallet</span>
+      <button class="wallet-modal-close" onclick="closeWalletModal()">✕</button>
+    </div>
+    <div class="wallet-list">
+      <div class="wallet-option" id="optMetaMask" onclick="connectWithProvider('metamask')">
+        <div class="wallet-icon">🦊</div>
+        <div class="wallet-info">
+          <span class="wallet-name">MetaMask</span>
+          <span class="wallet-desc">Browser extension wallet</span>
+        </div>
+      </div>
+      <div class="wallet-option" id="optRabby" onclick="connectWithProvider('rabby')">
+        <div class="wallet-icon" style="background:rgba(128,100,230,0.2);">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="22" rx="14" ry="11" fill="#8B5CF6"/><ellipse cx="20" cy="18" rx="10" ry="9" fill="#A78BFA"/><circle cx="15" cy="17" r="3" fill="white"/><circle cx="25" cy="17" r="3" fill="white"/><circle cx="15" cy="17" r="1.5" fill="#1a1a2e"/><circle cx="25" cy="17" r="1.5" fill="#1a1a2e"/></svg>
+        </div>
+        <div class="wallet-info">
+          <span class="wallet-name">Rabby Wallet</span>
+          <span class="wallet-desc">Security-first browser wallet</span>
+        </div>
+      </div>
+      <div class="wallet-option" id="optOKX" onclick="connectWithProvider('okx')">
+        <div class="wallet-icon" style="background:rgba(0,0,0,0.4);">
+          <svg width="22" height="22" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="8" fill="#000"/><rect x="6" y="6" width="11" height="11" fill="white"/><rect x="23" y="6" width="11" height="11" fill="white"/><rect x="6" y="23" width="11" height="11" fill="white"/><rect x="23" y="23" width="11" height="11" fill="white"/><rect x="14.5" y="14.5" width="11" height="11" fill="white"/></svg>
+        </div>
+        <div class="wallet-info">
+          <span class="wallet-name">OKX Wallet</span>
+          <span class="wallet-desc">Multi-chain Web3 wallet</span>
+        </div>
+      </div>
+      <div class="wallet-option" id="optCoinbase" onclick="connectWithProvider('coinbase')">
+        <div class="wallet-icon" style="background:rgba(0,82,255,0.15);">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="19" fill="#0052FF"/><circle cx="20" cy="20" r="13" fill="white"/><rect x="15" y="16" width="10" height="8" rx="2" fill="#0052FF"/></svg>
+        </div>
+        <div class="wallet-info">
+          <span class="wallet-name">Coinbase Wallet</span>
+          <span class="wallet-desc">Self-custody crypto wallet</span>
+        </div>
+      </div>
+      <div class="wallet-divider">or scan with phone</div>
+      <div class="wallet-option" id="optWalletConnect" onclick="connectWithProvider('walletconnect')">
+        <div class="wallet-icon" style="background:rgba(59,153,252,0.15);">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M9 16c6.1-5.9 16-5.9 22 0l.7.7c.3.3.3.7 0 1l-2.4 2.3c-.1.2-.4.2-.5 0L28 19.2c-4.3-4.1-11.2-4.1-15.5 0l-.9.9c-.1.1-.4.1-.5 0l-2.4-2.3c-.3-.3-.3-.7 0-1L9 16zm27.2 5l2.1 2c.3.3.3.7 0 .9l-9.6 9.3c-.3.3-.7.3-1 0L21 26.8c-.1-.1-.3-.1-.4 0l-6.7 6.5c-.3.3-.7.3-1 0L3.3 24c-.3-.3-.3-.7 0-.9l2.1-2c.3-.3.7-.3 1 0l6.7 6.5c.1.1.3.1.4 0l6.7-6.5c.3-.3.7-.3 1 0l6.7 6.5c.1.1.3.1.4 0l6.7-6.5c.3-.3.7-.3 1 0z" fill="#3B99FC"/></svg>
+        </div>
+        <div class="wallet-info">
+          <span class="wallet-name">WalletConnect</span>
+          <span class="wallet-desc">Trust Wallet, Rainbow &amp; 300+ wallets</span>
+        </div>
+      </div>
+    </div>
+    <p class="wallet-wc-note">
+      By connecting, you agree to the <a href="#">Terms of Service</a>.
+      This app runs on Ritual Testnet — use testnet tokens only.
+    </p>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="modal-icon">✓</div>
+    <h2 id="modalTitle">Minted!</h2>
+    <p id="modalMsg"></p>
+    <div class="modal-hash" id="modalHash"></div>
+    <button class="modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
