@@ -1,7 +1,8 @@
+import { ethers } from 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js';
 import { RITUAL_CHAIN } from '../config/chain.js';
 import { loadScript } from '../utils/helpers.js';
 import { setStatus } from '../ui/flow-stepper.js';
-import { updateChainInfo, stopChainInfoUpdates } from './chain.js';
+import { updateChainInfo } from './chain.js';
 
 export let provider = null;
 export let signer   = null;
@@ -15,12 +16,16 @@ function setAddress(a)   { walletAddress = a; }
 function setConnected(b) { isConnected = b; }
 function setChainId(id)  { currentChainId = id; }
 
-// ── Public exports for other modules to read state
 export function getProvider()    { return provider; }
 export function getSigner()      { return signer; }
 export function getAddress()     { return walletAddress; }
 export function getIsConnected() { return isConnected; }
 export function getChainId()     { return currentChainId; }
+
+// ── Helper: get any available provider
+function getAnyProvider() {
+  return window.ethereum || window.okxwallet || null;
+}
 
 // ── Wallet modal control
 export function openWalletModal() {
@@ -105,11 +110,6 @@ async function connectWalletConnect() {
   setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Loading WalletConnect...');
   document.getElementById('tokenStatus').classList.add('visible');
   try {
-    // Ensure ethers is loaded
-    if (!window.ethers) {
-      throw new Error('ethers.js library not loaded. Please refresh the page.');
-    }
-    
     if (!window.WalletConnectModalSign) {
       await loadScript('https://unpkg.com/@walletconnect/modal-sign-html@2.6.2/dist/index.umd.js');
     }
@@ -133,7 +133,7 @@ async function connectWalletConnect() {
     const wcAccounts = session.namespaces.eip155?.accounts || [];
     if (!wcAccounts.length) throw new Error('No accounts returned from WalletConnect');
     setAddress(wcAccounts[0].split(':')[2]);
-    setProvider(new window.ethers.JsonRpcProvider(RITUAL_CHAIN.rpc));
+    setProvider(new ethers.JsonRpcProvider(RITUAL_CHAIN.rpc));
     window._wcSign = wcSign;
     window._wcSession = session;
     setConnected(true);
@@ -149,21 +149,19 @@ async function connectWalletConnect() {
 // ── Core wallet connection
 export async function connectWallet(ethProvider) {
   try {
-    // Ensure ethers is loaded
-    if (!window.ethers) {
-      throw new Error('ethers.js library not loaded. Please refresh the page.');
-    }
-    
     setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Requesting wallet access...');
     document.getElementById('tokenStatus').classList.add('visible');
 
-    const p = new window.ethers.BrowserProvider(ethProvider);
+    const p = new ethers.BrowserProvider(ethProvider);
     const accounts = await p.send('eth_requestAccounts', []);
     if (!accounts?.length) throw new Error('No accounts returned');
 
     setProvider(p);
     setAddress(accounts[0]);
-    setSigner(await p.getSigner());
+
+    // FIX BUG #1: simpan ke local var dulu, baru set ke module state
+    const s = await p.getSigner();
+    setSigner(s);
 
     const network = await p.getNetwork();
     setChainId(Number(network.chainId));
@@ -183,15 +181,17 @@ export async function connectWallet(ethProvider) {
 
 // ── Switch / add Ritual Chain
 export async function switchToRitual(ethProvider) {
-  const ep = ethProvider || window.ethereum;
+  const ep = ethProvider || window.ethereum || window.okxwallet;
   if (!ep) { showWrongNetworkBanner(); return; }
   try {
     await ep.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: RITUAL_CHAIN.chainIdHex }] });
-    const p = new window.ethers.BrowserProvider(ep);
+    const p = new ethers.BrowserProvider(ep);
     setProvider(p);
-    const newSigner = await p.getSigner();
-    setSigner(newSigner);
-    setAddress(await newSigner.getAddress());
+
+    // FIX BUG #1: gunakan local var, bukan modul-level signer yang belum di-set
+    const s = await p.getSigner();
+    setSigner(s);
+    setAddress(await s.getAddress());
     setChainId(RITUAL_CHAIN.chainId);
     onConnected();
   } catch (switchErr) {
@@ -205,11 +205,13 @@ export async function switchToRitual(ethProvider) {
             rpcUrls: [RITUAL_CHAIN.rpc], blockExplorerUrls: [RITUAL_CHAIN.explorer],
           }],
         });
-        const p = new window.ethers.BrowserProvider(ep);
+        const p = new ethers.BrowserProvider(ep);
         setProvider(p);
-        const newSigner = await p.getSigner();
-        setSigner(newSigner);
-        setAddress(await newSigner.getAddress());
+
+        // FIX BUG #1: sama, pakai local var
+        const s = await p.getSigner();
+        setSigner(s);
+        setAddress(await s.getAddress());
         setChainId(RITUAL_CHAIN.chainId);
         onConnected();
       } catch (addErr) {
@@ -229,19 +231,6 @@ export async function switchToRitual(ethProvider) {
 
 // ── Disconnect
 export function disconnectWallet() {
-  stopChainInfoUpdates();
-  
-  // Cleanup WalletConnect session
-  if (window._wcSign) {
-    try {
-      window._wcSign.disconnect();
-    } catch (_) {
-      // silent fail
-    }
-    window._wcSign = null;
-  }
-  if (window._wcSession) window._wcSession = null;
-  
   setConnected(false);
   setAddress('');
   setSigner(null);
@@ -275,11 +264,12 @@ function onConnected() {
   document.getElementById('nftRecipient').placeholder = walletAddress;
   document.getElementById('tokenStatus').classList.remove('visible');
 
-  if (window.ethereum) {
-    window.ethereum.removeListener('chainChanged', handleChainChange);
-    window.ethereum.removeListener('accountsChanged', handleAccountChange);
-    window.ethereum.on('chainChanged', handleChainChange);
-    window.ethereum.on('accountsChanged', handleAccountChange);
+  const ep = window.ethereum || window.okxwallet;
+  if (ep) {
+    ep.removeListener?.('chainChanged', handleChainChange);
+    ep.removeListener?.('accountsChanged', handleAccountChange);
+    ep.on?.('chainChanged', handleChainChange);
+    ep.on?.('accountsChanged', handleAccountChange);
   }
   updateChainInfo();
 }
