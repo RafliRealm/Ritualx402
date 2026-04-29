@@ -5,12 +5,28 @@ export const X402_CONFIG = {
   mintFeeTokenEth: '0.001',
   mintFeeNFTEth:   '0.005',
   get mintFeeToken() { 
-    if (!window.ethers) throw new Error('ethers not loaded on window');
-    return window.ethers.parseEther(this.mintFeeTokenEth); 
+    try {
+      if (!window.ethers) {
+        console.warn('⚠️ ethers not loaded, returning BigInt(0)');
+        return 0n;
+      }
+      return window.ethers.parseEther(this.mintFeeTokenEth); 
+    } catch (err) {
+      console.error('Error parsing fee:', err);
+      return 0n;
+    }
   },
   get mintFeeNFT() { 
-    if (!window.ethers) throw new Error('ethers not loaded on window');
-    return window.ethers.parseEther(this.mintFeeNFTEth); 
+    try {
+      if (!window.ethers) {
+        console.warn('⚠️ ethers not loaded, returning BigInt(0)');
+        return 0n;
+      }
+      return window.ethers.parseEther(this.mintFeeNFTEth); 
+    } catch (err) {
+      console.error('Error parsing fee:', err);
+      return 0n;
+    }
   },
   treasury: '0x000000000000000000000000000000000000dEaD',
 };

@@ -105,6 +105,11 @@ async function connectWalletConnect() {
   setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Loading WalletConnect...');
   document.getElementById('tokenStatus').classList.add('visible');
   try {
+    // Ensure ethers is loaded
+    if (!window.ethers) {
+      throw new Error('ethers.js library not loaded. Please refresh the page.');
+    }
+    
     if (!window.WalletConnectModalSign) {
       await loadScript('https://unpkg.com/@walletconnect/modal-sign-html@2.6.2/dist/index.umd.js');
     }
@@ -144,6 +149,11 @@ async function connectWalletConnect() {
 // ── Core wallet connection
 export async function connectWallet(ethProvider) {
   try {
+    // Ensure ethers is loaded
+    if (!window.ethers) {
+      throw new Error('ethers.js library not loaded. Please refresh the page.');
+    }
+    
     setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Requesting wallet access...');
     document.getElementById('tokenStatus').classList.add('visible');
 

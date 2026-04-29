@@ -10,6 +10,17 @@
 <link rel="stylesheet" href="styles/main.css"/>
 <link rel="stylesheet" href="styles/components.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+<script>
+  // Verify ethers loads, fallback if needed
+  window.ethersLoadTimeout = setTimeout(function() {
+    if (!window.ethers) {
+      console.error('❌ ethers.js failed to load from CDN. Showing alert.');
+      document.body.innerHTML = '<div style="padding:20px;color:red;font-family:monospace;"><h2>Error: ethers.js Library Failed to Load</h2><p>The ethers.js library from CDN failed to load. This is required for the app to work.</p><p>Please refresh the page or check your internet connection.</p></div>';
+    } else {
+      console.log('✅ ethers.js loaded successfully:', typeof window.ethers);
+    }
+  }, 3000);
+</script>
 </head>
 <body>
 <div class="wrapper">
