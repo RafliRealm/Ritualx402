@@ -3,9 +3,6 @@ import { loadScript } from '../utils/helpers.js';
 import { setStatus } from '../ui/flow-stepper.js';
 import { updateChainInfo, stopChainInfoUpdates } from './chain.js';
 
-// ethers is already loaded as global in index.html
-const { ethers } = window;
-
 export let provider = null;
 export let signer   = null;
 export let walletAddress = '';
@@ -131,7 +128,7 @@ async function connectWalletConnect() {
     const wcAccounts = session.namespaces.eip155?.accounts || [];
     if (!wcAccounts.length) throw new Error('No accounts returned from WalletConnect');
     setAddress(wcAccounts[0].split(':')[2]);
-    setProvider(new ethers.JsonRpcProvider(RITUAL_CHAIN.rpc));
+    setProvider(new window.ethers.JsonRpcProvider(RITUAL_CHAIN.rpc));
     window._wcSign = wcSign;
     window._wcSession = session;
     setConnected(true);
@@ -150,7 +147,7 @@ export async function connectWallet(ethProvider) {
     setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Requesting wallet access...');
     document.getElementById('tokenStatus').classList.add('visible');
 
-    const p = new ethers.BrowserProvider(ethProvider);
+    const p = new window.ethers.BrowserProvider(ethProvider);
     const accounts = await p.send('eth_requestAccounts', []);
     if (!accounts?.length) throw new Error('No accounts returned');
 
@@ -180,7 +177,7 @@ export async function switchToRitual(ethProvider) {
   if (!ep) { showWrongNetworkBanner(); return; }
   try {
     await ep.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: RITUAL_CHAIN.chainIdHex }] });
-    const p = new ethers.BrowserProvider(ep);
+    const p = new window.ethers.BrowserProvider(ep);
     setProvider(p);
     const newSigner = await p.getSigner();
     setSigner(newSigner);
@@ -198,7 +195,7 @@ export async function switchToRitual(ethProvider) {
             rpcUrls: [RITUAL_CHAIN.rpc], blockExplorerUrls: [RITUAL_CHAIN.explorer],
           }],
         });
-        const p = new ethers.BrowserProvider(ep);
+        const p = new window.ethers.BrowserProvider(ep);
         setProvider(p);
         const newSigner = await p.getSigner();
         setSigner(newSigner);

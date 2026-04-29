@@ -1,8 +1,5 @@
 import { getProvider, getAddress, getChainId } from './wallet.js';
 
-// ethers is already loaded as global in index.html
-const { ethers } = window;
-
 let blockInterval = null;
 
 async function updateChainInfoOnce() {
@@ -21,7 +18,7 @@ async function updateChainInfoOnce() {
     const address = getAddress();
     if (address) {
       const bal = await provider.getBalance(address);
-      const balTrunc = parseFloat(ethers.formatEther(bal)).toFixed(4);
+      const balTrunc = parseFloat(window.ethers.formatEther(bal)).toFixed(4);
       document.getElementById('ciBalance').textContent = balTrunc + ' RITUAL';
       document.getElementById('balanceBadge').textContent = balTrunc + ' RITUAL';
     }

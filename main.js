@@ -1,9 +1,25 @@
+// Ensure ethers is loaded before we import modules
+async function waitForEthers(maxWait = 5000) {
+  const startTime = Date.now();
+  while (!window.ethers) {
+    if (Date.now() - startTime > maxWait) {
+      throw new Error('ethers library did not load within ' + maxWait + 'ms');
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+}
+
 // Use dynamic imports for better error handling
 async function init() {
   try {
     console.log('🚀 Initializing RitualX402 app...');
     
+    // Wait for ethers to be available on window
+    await waitForEthers();
+    console.log('✅ ethers.js loaded on window:', typeof window.ethers);
+    
     // Dynamic import to avoid module loading issues
+    console.log('📦 Loading modules...');
     const { toggleConnect, connectWithProvider, switchToRitual, closeWalletModal, connectWallet } = await import('./services/wallet.js');
     const { executeMint } = await import('./services/mint.js');
     const { switchTab, updateFee, previewNFT } = await import('./ui/tabs.js');

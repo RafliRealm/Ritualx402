@@ -2,9 +2,6 @@ import { RITUAL_CHAIN } from '../config/chain.js';
 import { X402_CONFIG } from '../config/x402.js';
 import { getSigner, getAddress } from './wallet.js';
 
-// ethers is already loaded as global in index.html
-const { ethers } = window;
-
 /**
  * buildX402Payload — constructs the X402 payment authorization object.
  * Follows EIP-3009 / x402 V2 spec:
@@ -14,7 +11,7 @@ export async function buildX402Payload(resource, feeWei) {
   const signer  = getSigner();
   const address = getAddress();
   const deadline = Math.floor(Date.now() / 1000) + 60;
-  const nonce    = ethers.hexlify(ethers.randomBytes(32));
+  const nonce    = window.ethers.hexlify(window.ethers.randomBytes(32));
 
   const domain = {
     name: 'X402Payment',

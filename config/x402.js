@@ -1,6 +1,3 @@
-// ethers is already loaded as global in index.html
-const { ethers } = window;
-
 export const X402_CONFIG = {
   httpPrecompile:       '0x0000000000000000000000000000000000000801',
   httpPrecompileSecure: '0x0000000000000000000000000000000000000805',
@@ -8,12 +5,12 @@ export const X402_CONFIG = {
   mintFeeTokenEth: '0.001',
   mintFeeNFTEth:   '0.005',
   get mintFeeToken() { 
-    if (!ethers) throw new Error('ethers not loaded');
-    return ethers.parseEther(this.mintFeeTokenEth); 
+    if (!window.ethers) throw new Error('ethers not loaded on window');
+    return window.ethers.parseEther(this.mintFeeTokenEth); 
   },
   get mintFeeNFT() { 
-    if (!ethers) throw new Error('ethers not loaded');
-    return ethers.parseEther(this.mintFeeNFTEth); 
+    if (!window.ethers) throw new Error('ethers not loaded on window');
+    return window.ethers.parseEther(this.mintFeeNFTEth); 
   },
   treasury: '0x000000000000000000000000000000000000dEaD',
 };
