@@ -1,10 +1,10 @@
-import { toggleConnect, connectWithProvider, switchToRitual, openWalletModal, closeWalletModal } from './services/wallet.js';
+import { toggleConnect, connectWithProvider, switchToRitual,
+         closeWalletModal, connectWallet } from './services/wallet.js';
 import { executeMint } from './services/mint.js';
 import { switchTab, updateFee, previewNFT } from './ui/tabs.js';
 import { closeModal } from './ui/modals.js';
-import { connectWallet } from './services/wallet.js';
 
-// ── Expose to HTML onclick attributes
+// ── Expose ke HTML onclick attributes
 window.toggleConnect       = toggleConnect;
 window.connectWithProvider = connectWithProvider;
 window.closeWalletModal    = closeWalletModal;
@@ -30,9 +30,11 @@ window.addEventListener('load', () => {
 
   if (!anyProvider) {
     document.getElementById('noWalletAlert').classList.add('visible');
+    return;
   }
 
-  if (anyProvider && anyProvider.selectedAddress) {
+  // Auto-reconnect jika sudah pernah connect sebelumnya
+  if (anyProvider.selectedAddress) {
     connectWallet(anyProvider);
   }
 });

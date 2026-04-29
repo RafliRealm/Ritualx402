@@ -1,7 +1,11 @@
-import { ethers } from 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js';
+// FIX BUG B: Pakai ESM URL bukan UMD
+import { ethers } from 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.esm.min.js';
 import { RITUAL_CHAIN } from '../config/chain.js';
 import { loadScript } from '../utils/helpers.js';
 import { setStatus } from '../ui/flow-stepper.js';
+// FIX BUG A: HAPUS import updateChainInfo dari ./chain.js (circular dependency)
+// updateChainInfo sekarang dipanggil langsung dengan parameter
+
 import { updateChainInfo } from './chain.js';
 
 export let provider = null;
@@ -22,12 +26,12 @@ export function getAddress()     { return walletAddress; }
 export function getIsConnected() { return isConnected; }
 export function getChainId()     { return currentChainId; }
 
-// ── Helper: get any available provider
-function getAnyProvider() {
+// ── Helper: ambil provider manapun yang tersedia (FIX BUG #3 OKX)
+function getAnyEthProvider() {
   return window.ethereum || window.okxwallet || null;
 }
 
-// ── Wallet modal control
+// ── Wallet modal
 export function openWalletModal() {
   detectWallets();
   document.getElementById('walletModal').classList.add('open');
@@ -42,73 +46,62 @@ export function toggleConnect() {
   openWalletModal();
 }
 
-// ── Detect installed wallets and style options
 export function detectWallets() {
-  const eth = window.ethereum;
-  const hasMM    = !!(eth && eth.isMetaMask && !eth.isRabby);
-  const hasRabby = !!(eth && eth.isRabby);
-  const hasOKX   = !!window.okxwallet;
-  const hasCB    = !!(window.coinbaseWalletExtension || (eth && eth.isCoinbaseWallet));
+  const eth    = window.ethereum;
+  const hasMM  = !!(eth && eth.isMetaMask && !eth.isRabby);
+  const hasRab = !!(eth && eth.isRabby);
+  const hasOKX = !!window.okxwallet;
+  const hasCB  = !!(window.coinbaseWalletExtension || (eth && eth.isCoinbaseWallet));
 
-  styleWalletOption('optMetaMask',  hasMM,    'metamask',  'https://metamask.io/download/');
-  styleWalletOption('optRabby',     hasRabby, 'rabby',     'https://rabby.io/');
-  styleWalletOption('optOKX',       hasOKX,   'okx',       'https://www.okx.com/web3');
-  styleWalletOption('optCoinbase',  hasCB,    'coinbase',  'https://www.coinbase.com/wallet/downloads');
-
-  const wc = document.getElementById('optWalletConnect');
-  wc.classList.remove('not-installed', 'detected');
+  styleWalletOption('optMetaMask', hasMM,  'metamask', 'https://metamask.io/download/');
+  styleWalletOption('optRabby',    hasRab, 'rabby',    'https://rabby.io/');
+  styleWalletOption('optOKX',      hasOKX, 'okx',      'https://www.okx.com/web3');
+  styleWalletOption('optCoinbase', hasCB,  'coinbase', 'https://www.coinbase.com/wallet/downloads');
+  document.getElementById('optWalletConnect').classList.remove('not-installed', 'detected');
 }
 
-function styleWalletOption(id, detected, providerType, installUrl) {
+function styleWalletOption(id, detected, type, installUrl) {
   const el = document.getElementById(id);
   el.classList.remove('detected', 'not-installed');
   if (detected) {
     el.classList.add('detected');
-    el.onclick = () => connectWithProvider(providerType);
+    el.onclick = () => connectWithProvider(type);
   } else {
     el.classList.add('not-installed');
     el.onclick = () => window.open(installUrl, '_blank');
   }
 }
 
-// ── Connect with a specific provider type
 export async function connectWithProvider(type) {
   closeWalletModal();
   try {
     if (type === 'walletconnect') { await connectWalletConnect(); return; }
 
-    let ethProvider = null;
+    let ep = null;
     if (type === 'okx') {
       if (!window.okxwallet) { window.open('https://www.okx.com/web3', '_blank'); return; }
-      ethProvider = window.okxwallet;
+      ep = window.okxwallet;
     } else if (type === 'coinbase') {
-      if (window.coinbaseWalletExtension) {
-        ethProvider = window.coinbaseWalletExtension;
-      } else if (window.ethereum?.isCoinbaseWallet) {
-        ethProvider = window.ethereum;
-      } else {
-        window.open('https://www.coinbase.com/wallet/downloads', '_blank'); return;
-      }
+      if (window.coinbaseWalletExtension) ep = window.coinbaseWalletExtension;
+      else if (window.ethereum?.isCoinbaseWallet) ep = window.ethereum;
+      else { window.open('https://www.coinbase.com/wallet/downloads', '_blank'); return; }
     } else if (type === 'rabby') {
-      if (window.ethereum?.isRabby) { ethProvider = window.ethereum; }
+      if (window.ethereum?.isRabby) ep = window.ethereum;
       else { window.open('https://rabby.io/', '_blank'); return; }
     } else {
       if (!window.ethereum) { window.open('https://metamask.io/download/', '_blank'); return; }
-      ethProvider = window.ethereum;
+      ep = window.ethereum;
     }
 
-    await connectWallet(ethProvider);
+    await connectWallet(ep);
   } catch (err) {
     console.error(err);
-    setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'error', '✗ ' + (err.message || 'Connection failed'));
-    document.getElementById('tokenStatus').classList.add('visible');
+    showStatusError('✗ ' + (err.message || 'Connection failed'));
   }
 }
 
-// ── WalletConnect v2
 async function connectWalletConnect() {
-  setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Loading WalletConnect...');
-  document.getElementById('tokenStatus').classList.add('visible');
+  showStatusPending('⟳ Loading WalletConnect...');
   try {
     if (!window.WalletConnectModalSign) {
       await loadScript('https://unpkg.com/@walletconnect/modal-sign-html@2.6.2/dist/index.umd.js');
@@ -120,7 +113,7 @@ async function connectWalletConnect() {
         url: window.location.origin, icons: ['https://ritualfoundation.org/favicon.ico'],
       },
     });
-    setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Scan QR with your mobile wallet...');
+    showStatusPending('⟳ Scan QR with your mobile wallet...');
     const session = await wcSign.connect({
       requiredNamespaces: {
         eip155: {
@@ -132,36 +125,34 @@ async function connectWalletConnect() {
     });
     const wcAccounts = session.namespaces.eip155?.accounts || [];
     if (!wcAccounts.length) throw new Error('No accounts returned from WalletConnect');
+
     setAddress(wcAccounts[0].split(':')[2]);
     setProvider(new ethers.JsonRpcProvider(RITUAL_CHAIN.rpc));
     window._wcSign = wcSign;
     window._wcSession = session;
     setConnected(true);
     setChainId(RITUAL_CHAIN.chainId);
-    onConnectedWC();
+    onConnected();
   } catch (err) {
     if (err.message?.includes('Modal closed')) {
-      setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'error', '✗ WalletConnect modal closed by user');
+      showStatusError('✗ WalletConnect modal closed by user');
     } else { throw err; }
   }
 }
 
-// ── Core wallet connection
 export async function connectWallet(ethProvider) {
   try {
-    setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', '⟳ Requesting wallet access...');
-    document.getElementById('tokenStatus').classList.add('visible');
+    showStatusPending('⟳ Requesting wallet access...');
 
     const p = new ethers.BrowserProvider(ethProvider);
     const accounts = await p.send('eth_requestAccounts', []);
     if (!accounts?.length) throw new Error('No accounts returned');
 
-    setProvider(p);
-    setAddress(accounts[0]);
-
-    // FIX BUG #1: simpan ke local var dulu, baru set ke module state
+    // FIX BUG #1: simpan ke local var dulu sebelum set module state
     const s = await p.getSigner();
+    setProvider(p);
     setSigner(s);
+    setAddress(accounts[0]);
 
     const network = await p.getNetwork();
     setChainId(Number(network.chainId));
@@ -175,21 +166,19 @@ export async function connectWallet(ethProvider) {
     console.error('connectWallet error:', err);
     let msg = err.message || 'Unknown error';
     if (err.code === 4001 || err.code === 'ACTION_REJECTED') msg = 'Request rejected by user.';
-    setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'error', '✗ ' + msg);
+    showStatusError('✗ ' + msg);
   }
 }
 
-// ── Switch / add Ritual Chain
 export async function switchToRitual(ethProvider) {
-  const ep = ethProvider || window.ethereum || window.okxwallet;
+  const ep = ethProvider || getAnyEthProvider();
   if (!ep) { showWrongNetworkBanner(); return; }
   try {
     await ep.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: RITUAL_CHAIN.chainIdHex }] });
     const p = new ethers.BrowserProvider(ep);
-    setProvider(p);
-
-    // FIX BUG #1: gunakan local var, bukan modul-level signer yang belum di-set
+    // FIX BUG #1: local var dulu
     const s = await p.getSigner();
+    setProvider(p);
     setSigner(s);
     setAddress(await s.getAddress());
     setChainId(RITUAL_CHAIN.chainId);
@@ -200,16 +189,17 @@ export async function switchToRitual(ethProvider) {
         await ep.request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: RITUAL_CHAIN.chainIdHex, chainName: RITUAL_CHAIN.name,
+            chainId: RITUAL_CHAIN.chainIdHex,
+            chainName: RITUAL_CHAIN.name,
             nativeCurrency: RITUAL_CHAIN.nativeCurrency,
-            rpcUrls: [RITUAL_CHAIN.rpc], blockExplorerUrls: [RITUAL_CHAIN.explorer],
+            rpcUrls: [RITUAL_CHAIN.rpc],
+            blockExplorerUrls: [RITUAL_CHAIN.explorer],
           }],
         });
         const p = new ethers.BrowserProvider(ep);
-        setProvider(p);
-
-        // FIX BUG #1: sama, pakai local var
+        // FIX BUG #1: local var dulu
         const s = await p.getSigner();
+        setProvider(p);
         setSigner(s);
         setAddress(await s.getAddress());
         setChainId(RITUAL_CHAIN.chainId);
@@ -219,9 +209,7 @@ export async function switchToRitual(ethProvider) {
         showWrongNetworkBanner();
       }
     } else if (switchErr.code === 4001 || switchErr.code === 'ACTION_REJECTED') {
-      setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'error',
-        '✗ Network switch rejected. Please switch to Ritual Chain (1979) manually.');
-      document.getElementById('tokenStatus').classList.add('visible');
+      showStatusError('✗ Network switch rejected. Please switch to Ritual Chain (1979) manually.');
     } else {
       console.error('switchChain error:', switchErr);
       showWrongNetworkBanner();
@@ -229,7 +217,6 @@ export async function switchToRitual(ethProvider) {
   }
 }
 
-// ── Disconnect
 export function disconnectWallet() {
   setConnected(false);
   setAddress('');
@@ -244,7 +231,6 @@ export function disconnectWallet() {
   document.getElementById('balanceBadge').style.display = 'none';
 }
 
-// ── Post-connection UI updates
 function onConnected() {
   setConnected(true);
   setChainId(RITUAL_CHAIN.chainId);
@@ -264,30 +250,17 @@ function onConnected() {
   document.getElementById('nftRecipient').placeholder = walletAddress;
   document.getElementById('tokenStatus').classList.remove('visible');
 
-  const ep = window.ethereum || window.okxwallet;
+  // FIX BUG #3: daftarkan listener di semua provider yang mungkin ada
+  const ep = getAnyEthProvider();
   if (ep) {
     ep.removeListener?.('chainChanged', handleChainChange);
     ep.removeListener?.('accountsChanged', handleAccountChange);
     ep.on?.('chainChanged', handleChainChange);
     ep.on?.('accountsChanged', handleAccountChange);
   }
-  updateChainInfo();
-}
 
-function onConnectedWC() {
-  const btn = document.getElementById('connectBtn');
-  btn.textContent = 'WC: ' + walletAddress.slice(0,6) + '...' + walletAddress.slice(-4);
-  btn.classList.add('connected');
-  btn.classList.remove('wrong-network');
-  document.getElementById('chainBadge').classList.remove('wrong');
-  document.getElementById('wrongNetworkAlert').classList.remove('visible');
-  document.getElementById('noWalletAlert').classList.remove('visible');
-  document.getElementById('chainInfoPanel').classList.add('visible');
-  document.getElementById('balanceBadge').style.display = 'flex';
-  document.getElementById('tokenRecipient').placeholder = walletAddress;
-  document.getElementById('nftRecipient').placeholder = walletAddress;
-  document.getElementById('tokenStatus').classList.remove('visible');
-  updateChainInfo();
+  // FIX BUG A: kirim parameter langsung, tidak lewat import circular
+  updateChainInfo(provider, walletAddress, currentChainId);
 }
 
 export function showWrongNetworkBanner() {
@@ -299,7 +272,6 @@ export function showWrongNetworkBanner() {
   btn.textContent = 'Wrong Network';
 }
 
-// ── Chain change listeners
 function handleChainChange(chainIdHex) {
   const newId = parseInt(chainIdHex, 16);
   setChainId(newId);
@@ -308,8 +280,9 @@ function handleChainChange(chainIdHex) {
   } else {
     document.getElementById('wrongNetworkAlert').classList.remove('visible');
     document.getElementById('chainBadge').classList.remove('wrong');
+    document.getElementById('chainBadge').textContent = 'Ritual Chain · 1979';
   }
-  updateChainInfo();
+  updateChainInfo(provider, walletAddress, newId);
 }
 
 function handleAccountChange(accounts) {
@@ -319,6 +292,17 @@ function handleAccountChange(accounts) {
     setAddress(accounts[0]);
     document.getElementById('connectBtn').textContent =
       walletAddress.slice(0,6) + '...' + walletAddress.slice(-4);
-    updateChainInfo();
+    updateChainInfo(provider, walletAddress, currentChainId);
   }
+}
+
+// ── Internal status helpers
+function showStatusPending(msg) {
+  setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'pending', msg);
+  document.getElementById('tokenStatus').classList.add('visible');
+}
+
+function showStatusError(msg) {
+  setStatus('token', 'tokenStatusDot', 'tokenStatusText', 'error', msg);
+  document.getElementById('tokenStatus').classList.add('visible');
 }
