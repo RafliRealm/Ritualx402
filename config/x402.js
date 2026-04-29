@@ -1,4 +1,5 @@
-import { ethers } from 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js';
+// ethers is already loaded as global in index.html
+const { ethers } = window;
 
 export const X402_CONFIG = {
   httpPrecompile:       '0x0000000000000000000000000000000000000801',
@@ -6,8 +7,14 @@ export const X402_CONFIG = {
   dkmsPrecompile:       '0x000000000000000000000000000000000000081B',
   mintFeeTokenEth: '0.001',
   mintFeeNFTEth:   '0.005',
-  get mintFeeToken() { return ethers.parseEther(this.mintFeeTokenEth); },
-  get mintFeeNFT()   { return ethers.parseEther(this.mintFeeNFTEth); },
+  get mintFeeToken() { 
+    if (!ethers) throw new Error('ethers not loaded');
+    return ethers.parseEther(this.mintFeeTokenEth); 
+  },
+  get mintFeeNFT() { 
+    if (!ethers) throw new Error('ethers not loaded');
+    return ethers.parseEther(this.mintFeeNFTEth); 
+  },
   treasury: '0x000000000000000000000000000000000000dEaD',
 };
 

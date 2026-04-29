@@ -1,7 +1,7 @@
+import { getProvider, getAddress, getChainId } from './wallet.js';
+
 // ethers is already loaded as global in index.html
 const { ethers } = window;
-
-import { getProvider, getAddress, getChainId } from './wallet.js';
 
 let blockInterval = null;
 

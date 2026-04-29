@@ -1,9 +1,9 @@
-// ethers is already loaded as global in index.html
-const { ethers } = window;
-
 import { RITUAL_CHAIN } from '../config/chain.js';
 import { X402_CONFIG } from '../config/x402.js';
 import { getSigner, getAddress } from './wallet.js';
+
+// ethers is already loaded as global in index.html
+const { ethers } = window;
 
 /**
  * buildX402Payload — constructs the X402 payment authorization object.
